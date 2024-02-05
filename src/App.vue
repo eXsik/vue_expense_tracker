@@ -5,15 +5,22 @@ import IncomeExpenses from '@/components/IncomeExpenses.vue';
 import TransactionList from '@/components/TransactionList.vue';
 import AddTransaction from '@/components/AddTransaction.vue';
 
-import { computed, ref } from 'vue';
+import { useToast } from 'vue-toastification';
 
-const transactions = ref([
-  { id: 1, text: 'Flowers', amount: -19.99 },
-  { id: 2, text: 'Salary', amount: 299.97 },
-  { id: 3, text: 'Book', amount: -10.00 },
-  { id: 4, text: 'Camera', amount: 150.00 }
-]);
+import { computed, onMounted, ref } from 'vue';
 
+const toast = useToast();
+
+const transactions = ref([]);
+
+
+onMounted(() => {
+  const savedTransactions = JSON.parse(localStorage.getItem("transactions"));
+  
+  if (savedTransactions) {
+    transactions.value = savedTransactions;
+  }
+});
 // Get total
 const total = computed(() => {
   return transactions.value
@@ -42,8 +49,35 @@ const expenses = computed(() => {
 
 // Add Transaction
 const handleTransactionSubmitted = (transactionData) => {
-  console.log(transactionData);
+  transactions.value.push({
+    id: generateUniqueId(),
+    text: transactionData.text,
+    amount: transactionData.amount
+  });
+
+  saveTransactionsToLocalStorage();
+
+  toast.success('Transaction added successfully');
 };
+
+// Delete Transaction
+const handleTransactionDeleted = (id) => {
+  transactions.value = transactions.value.filter((transaction) => transaction.id !== id);
+
+  saveTransactionsToLocalStorage();
+
+  toast.success('Transaction removed successfully');
+};
+
+// Generate Unique Id
+const generateUniqueId = () => {
+  return Math.floor(Math.random() * 1000000);
+};
+
+// Save to localStorage
+const saveTransactionsToLocalStorage = () => {
+  localStorage.setItem('transactions', JSON.stringify(transactions.value));
+}
 
 </script>
 
@@ -52,7 +86,7 @@ const handleTransactionSubmitted = (transactionData) => {
   <div class="container">
     <Balance :total="+total"></Balance>
     <IncomeExpenses :income="+income" :expenses="+expenses"></IncomeExpenses>
-    <TransactionList :transactions="transactions"></TransactionList>
+    <TransactionList :transactions="transactions" @transaction-deleted="handleTransactionDeleted"></TransactionList>
     <AddTransaction @transaction-submitted="handleTransactionSubmitted"></AddTransaction>
   </div>
 </template>
